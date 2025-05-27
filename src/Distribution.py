@@ -51,20 +51,15 @@ def main():
         cmap = plt.cm.get_cmap("tab10", len(categories))
         colors = [cmap(i) for i in range(len(categories))]
 
-        plt.figure(figsize=(16, 8))
+        fig, axs = plt.subplots(1, 2, figsize=(16, 8))
+        fig.suptitle("Class Distribution")
 
-        plt.subplot(121)
-        plt.pie(
-            categories.values(),
-            labels=categories.keys(),
-            autopct="%1.0f%%",
-            colors=colors,
-        )
+        axs[0].pie(categories.values(), autopct="%1.0f%%", colors=colors)
+        axs[1].bar(categories.keys(), categories.values(), color=colors)
+        axs[1].set_xticks([])
 
-        plt.subplot(122)
-        plt.bar(categories.keys(), categories.values(), color=colors)
+        fig.legend(categories.keys(), loc="upper left")
 
-        plt.suptitle("Class Distribution")
         plt.show()
 
     except FileNotFoundError:
