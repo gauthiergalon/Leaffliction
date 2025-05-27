@@ -1,23 +1,9 @@
-# **************************************************************************** #
-#                                                                              #
-#                                                         :::      ::::::::    #
-#    Distribution.py                                    :+:      :+:    :+:    #
-#                                                     +:+ +:+         +:+      #
-#    By: ggalon <ggalon@student.42lyon.fr>          +#+  +:+       +#+         #
-#                                                 +#+#+#+#+#+   +#+            #
-#    Created: 2025/05/27 13:59:07 by ggalon            #+#    #+#              #
-#    Updated: 2025/05/27 16:31:03 by ggalon           ###   ########.fr        #
-#                                                                              #
-# **************************************************************************** #
-
 import os
 import signal
 import matplotlib.pyplot as plt
 from argparse import ArgumentParser
 
-
 DEFAULT_LOCATION_DATASET = "images/"
-
 
 def parse_args():
     parser = ArgumentParser(
@@ -55,15 +41,15 @@ def main():
         cmap = plt.cm.get_cmap('tab10', len(categories))
         colors = [cmap(i) for i in range(len(categories))]
 
-        plt.figure(figsize=(16, 8))
+        fig, axs = plt.subplots(1, 2, figsize=(16, 8))
+        fig.suptitle("Class Distribution")
 
-        plt.subplot(121)
-        plt.pie(categories.values(), labels=categories.keys(), autopct='%1.0f%%', colors=colors)
+        axs[0].pie(categories.values(), autopct='%1.0f%%', colors=colors)
+        axs[1].bar(categories.keys(), categories.values(), color=colors)
+        axs[1].set_xticks([])
 
-        plt.subplot(122)
-        plt.bar(categories.keys(), categories.values(), color=colors)
-
-        plt.suptitle("Class Distribution")
+        fig.legend(categories.keys(), loc="upper left")
+        
         plt.show()
 
     except Exception as ex:
