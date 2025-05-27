@@ -30,13 +30,17 @@ def main():
             lambda *_: (print("\033[2DLeaffliction: CTRL+C sent by user."), exit(1)),
         )
 
-        categories = {}
-
-        for dirpath, _, filenames in os.walk(args.path):
-            if os.path.abspath(dirpath) == os.path.abspath(args.path):
-                continue
-            categorie = os.path.basename(dirpath)
-            categories[categorie] = len(filenames)
+        categories = {
+            entry.name: len(
+                [
+                    file
+                    for file in os.listdir(entry.path)
+                    if os.path.isfile(os.path.join(entry.path, file))
+                ]
+            )
+            for entry in os.scandir(args.path)
+            if entry.is_dir()
+        }
 
         cmap = plt.cm.get_cmap('tab10', len(categories))
         colors = [cmap(i) for i in range(len(categories))]
@@ -52,6 +56,10 @@ def main():
         
         plt.show()
 
+    except FileNotFoundError:
+        print(f"Error: File '{args.path}' not found.")
+    except PermissionError:
+        print(f"Error: Permission denied for '{args.path}'.")
     except Exception as ex:
         print(f"Unexpected error occured : {ex}")
 
