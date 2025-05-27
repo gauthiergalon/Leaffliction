@@ -42,13 +42,14 @@ def main():
                     file
                     for file in os.listdir(entry.path)
                     if os.path.isfile(os.path.join(entry.path, file))
+                    and file.lower().endswith(".jpg")
                 ]
             )
             for entry in os.scandir(args.path)
             if entry.is_dir()
         }
 
-        cmap = plt.cm.get_cmap("tab10", len(categories))
+        cmap = plt.colormaps["tab10"]
         colors = [cmap(i) for i in range(len(categories))]
 
         fig, axs = plt.subplots(1, 2, figsize=(16, 8))
