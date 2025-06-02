@@ -83,13 +83,9 @@ def img_color_histogram(rgb_img, mask, save=False):
                 hist_data["color channel"] == channel_key
             ].copy()
 
-            channel_plot_data["hist_percentage"] = (
-                channel_plot_data["hist_count"] / total_masked_pixels
-            ) * 100
-
             plt.plot(
                 channel_plot_data["pixel intensity"],
-                channel_plot_data["hist_percentage"],
+                channel_plot_data["proportion of pixels (%)"],
                 label=f"{channel_names[i]} ({space_name})",
                 color=colors[color_index],
             )
