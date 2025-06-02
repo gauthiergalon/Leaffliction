@@ -4,8 +4,6 @@ from argparse import ArgumentParser
 import albumentations as A
 import cv2
 
-DEFAULT_LOCATION_DATASET = "images/"
-
 
 def parse_args():
     parser = ArgumentParser(
