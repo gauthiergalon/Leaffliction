@@ -181,8 +181,8 @@ def generate_pseudolandmarks(rgb_img, top, bottom, center_v):
     return fig
 
 
-def transform(args, save):
-    rgb_img, _, _ = pcv.readimage(args.src)
+def transform(src, dst, save):
+    rgb_img, _, _ = pcv.readimage(src)
 
     a_gray = pcv.rgb2gray_lab(rgb_img=rgb_img, channel="a")
     a_mask = pcv.threshold.otsu(gray_img=a_gray, object_type="dark")
@@ -199,8 +199,8 @@ def transform(args, save):
     pseudo_fig = generate_pseudolandmarks(rgb_img, top, bottom, center_v)
 
     if save:
-        abs_path = os.path.abspath(args.dst)
-        base_name = os.path.basename(args.src)
+        abs_path = os.path.abspath(dst)
+        base_name = os.path.basename(src)
         pcv.print_image(mask_image, f"{abs_path}/mask_{base_name}")
         pcv.print_image(gaussian_img, f"{abs_path}/gaussian_{base_name}")
         pcv.print_image(shape_img, f"{abs_path}/roi_{base_name}")
@@ -227,10 +227,17 @@ def main():
             ),
         )
 
+        files = []
+        os.makedirs(os.path.abspath(args.dst), exist_ok=True)
+
         if os.path.isdir(args.src):
-            folder = True
+            files = [
+                os.path.join(args.src, f)
+                for f in os.listdir(args.src)
+                if f.lower().endswith((".jpg", ".jpeg", ".png"))
+            ]
         elif os.path.isfile(args.src):
-            folder = False
+            files = [args.src]
         else:
             raise FileNotFoundError
 
@@ -242,7 +249,8 @@ def main():
         else:
             save = False
 
-        transform(args, save)
+        for file in files:
+            transform(file, args.dst, save)
 
     except FileNotFoundError:
         print(f"Error: File '{args.src}' not found.")
