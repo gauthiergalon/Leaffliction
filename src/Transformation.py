@@ -29,11 +29,10 @@ def parse_args():
     return parser.parse_args()
 
 
-def img_color_histogram(rgb_img, mask, save=False):
+def img_color_histogram(rgb_img, mask):
     total_masked_pixels = cv2.countNonZero(mask)
     if total_masked_pixels == 0:
-        print("Warning: Mask is empty, cannot generate percentage histogram.")
-        return
+        return None
 
     _, rgb_data = pcv.visualize.histogram(
         img=rgb_img,
@@ -59,7 +58,7 @@ def img_color_histogram(rgb_img, mask, save=False):
         (lab_data, ["L*", "a*", "b*"], "LAB"),
     ]
 
-    plt.figure(figsize=(15, 7))
+    fig = plt.figure(figsize=(15, 7))
 
     colors = [
         "blue",
@@ -95,46 +94,94 @@ def img_color_histogram(rgb_img, mask, save=False):
     plt.ylabel("Proportion of pixels (%)")
     plt.legend(loc="center right")
     plt.grid(True)
-    plt.show()
+
+    return fig
 
 
-def img_analyze_object(rgb_img, mask, save=False):
+def img_roi(rgb_img, mask):
     rect_roi = pcv.roi.rectangle(img=rgb_img, x=0, y=0, h=256, w=256)
     cleaned_mask = pcv.fill(bin_img=mask, size=50)
     filtered_mask = pcv.roi.filter(
         mask=cleaned_mask, roi=rect_roi, roi_type="partial"
     )
     shape_img = pcv.analyze.size(img=rgb_img, labeled_mask=filtered_mask)
+    return shape_img
 
-    pcv.plot_image(img=shape_img)
+
+def img_analyze_thermal(rgb_img, mask):
+    gray_img = pcv.rgb2gray(rgb_img=rgb_img)
+    pseudocolor_img = pcv.visualize.pseudocolor(
+        gray_img,
+        min_value=0,
+        max_value=100,
+        mask=mask,
+    )
+    return pseudocolor_img
 
 
-def img_gaussian_blur(rgb_img, mask, save=False):
+def img_gaussian_blur(rgb_img, mask):
     gaussian_img = pcv.gaussian_blur(
         img=mask,
         ksize=(3, 3),
     )
-    pcv.plot_image(img=gaussian_img)
+    return gaussian_img
 
 
-def img_apply_mask(rgb_img, mask, save=False):
-    masked_image = pcv.apply_mask(img=rgb_img, mask=mask, mask_color="white")
-    pcv.plot_image(img=masked_image)
+def img_apply_mask(rgb_img, mask):
+    mask_image = pcv.apply_mask(img=rgb_img, mask=mask, mask_color="white")
+    return mask_image
 
 
-def img_pseudolandmarks(rgb_img, mask, save=False):
+def img_pseudolandmarks(rgb_img, mask):
     top, bottom, center_v = pcv.homology.x_axis_pseudolandmarks(
         img=rgb_img,
         mask=mask,
     )
+    return top, bottom, center_v
 
 
-def directory(args):
-    if not os.path.isdir(args.dst):
-        raise SystemError("Error: missing argument.")
+def extract_coordinates(landmarks):
+    x_coords = [landmark[0][0] for landmark in landmarks]
+    y_coords = [landmark[0][1] for landmark in landmarks]
+
+    return x_coords, y_coords
 
 
-def file(args):
+def generate_pseudolandmarks(rgb_img, top, bottom, center_v):
+    top_x, top_y = extract_coordinates(top)
+    bottom_x, bottom_y = extract_coordinates(bottom)
+    center_v_x, center_v_y = extract_coordinates(center_v)
+
+    fig = plt.figure(figsize=(10, 10))
+    plt.imshow(cv2.cvtColor(rgb_img, cv2.COLOR_BGR2RGB))
+    plt.scatter(
+        top_x,
+        top_y,
+        color="blue",
+        label="Top Landmark",
+        s=100,
+    )
+    plt.scatter(
+        bottom_x,
+        bottom_y,
+        color="magenta",
+        label="Bottom Landmark",
+        s=100,
+    )
+    plt.scatter(
+        center_v_x,
+        center_v_y,
+        color="orange",
+        label="Center Vertical Landmark",
+        s=100,
+    )
+    plt.legend(loc="upper right")
+    plt.title("Pseudolandmarks on Image")
+    plt.axis("off")
+    return fig
+
+
+def transform(args, save):
     rgb_img, _, _ = pcv.readimage(args.src)
 
     a_gray = pcv.rgb2gray_lab(rgb_img=rgb_img, channel="a")
@@ -143,11 +190,29 @@ def file(args):
     v_gray = pcv.rgb2gray_hsv(rgb_img=rgb_img, channel="v")
     v_mask = pcv.threshold.otsu(gray_img=v_gray, object_type="dark")
 
-    # img_apply_mask(rgb_img, a_mask)
-    # img_gaussian_blur(rgb_img, v_mask)
-    img_color_histogram(rgb_img, a_mask)
-    # img_analyze_object(rgb_img, a_mask)
-    # img_pseudolandmarks(rgb_img, a_mask)
+    mask_image = img_apply_mask(rgb_img, a_mask)
+    gaussian_img = img_gaussian_blur(rgb_img, v_mask)
+    color_fig = img_color_histogram(rgb_img, a_mask)
+    shape_img = img_roi(rgb_img, a_mask)
+    pseudocolor_img = img_analyze_thermal(rgb_img, a_mask)
+    top, bottom, center_v = img_pseudolandmarks(rgb_img, a_mask)
+    pseudo_fig = generate_pseudolandmarks(rgb_img, top, bottom, center_v)
+
+    if save:
+        abs_path = os.path.abspath(args.dst)
+        base_name = os.path.basename(args.src)
+        pcv.print_image(mask_image, f"{abs_path}/mask_{base_name}")
+        pcv.print_image(gaussian_img, f"{abs_path}/gaussian_{base_name}")
+        pcv.print_image(shape_img, f"{abs_path}/roi_{base_name}")
+        pcv.print_image(pseudocolor_img, f"{abs_path}/thermal_{base_name}")
+        color_fig.savefig(f"{abs_path}/color_{base_name}")
+        pseudo_fig.savefig(f"{abs_path}/pseudo_{base_name}")
+    else:
+        pcv.plot_image(mask_image)
+        pcv.plot_image(gaussian_img)
+        pcv.plot_image(shape_img)
+        # pcv.plot_image(pseudocolor_img) jarrive pas a afficher ca aled
+        plt.show()
 
 
 def main():
@@ -163,11 +228,21 @@ def main():
         )
 
         if os.path.isdir(args.src):
-            directory(args)
+            folder = True
         elif os.path.isfile(args.src):
-            file(args)
+            folder = False
         else:
             raise FileNotFoundError
+
+        # Check if JPG
+
+        if args.dst:
+            pcv.params.debug_outdir = os.path.abspath(args.dst)
+            save = True
+        else:
+            save = False
+
+        transform(args, save)
 
     except FileNotFoundError:
         print(f"Error: File '{args.src}' not found.")
