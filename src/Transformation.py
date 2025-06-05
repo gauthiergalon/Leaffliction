@@ -99,7 +99,8 @@ def img_color_histogram(rgb_img, mask):
 
 
 def img_roi(rgb_img, mask):
-    rect_roi = pcv.roi.rectangle(img=rgb_img, x=0, y=0, h=256, w=256)
+    height, width, _ = rgb_img.shape
+    rect_roi = pcv.roi.rectangle(img=rgb_img, x=0, y=0, h=height, w=width)
     cleaned_mask = pcv.fill(bin_img=mask, size=50)
     filtered_mask = pcv.roi.filter(
         mask=cleaned_mask, roi=rect_roi, roi_type="partial"
@@ -194,7 +195,7 @@ def transform(src, dst, save):
     gaussian_img = img_gaussian_blur(rgb_img, v_mask)
     color_fig = img_color_histogram(rgb_img, a_mask)
     shape_img = img_roi(rgb_img, a_mask)
-    pseudocolor_img = img_analyze_thermal(rgb_img, a_mask)
+    pseudocolor_fig = img_analyze_thermal(rgb_img, a_mask)
     top, bottom, center_v = img_pseudolandmarks(rgb_img, a_mask)
     pseudo_fig = generate_pseudolandmarks(rgb_img, top, bottom, center_v)
 
@@ -204,14 +205,14 @@ def transform(src, dst, save):
         pcv.print_image(mask_image, f"{abs_path}/mask_{base_name}")
         pcv.print_image(gaussian_img, f"{abs_path}/gaussian_{base_name}")
         pcv.print_image(shape_img, f"{abs_path}/roi_{base_name}")
-        pcv.print_image(pseudocolor_img, f"{abs_path}/thermal_{base_name}")
+        pcv.print_image(pseudocolor_fig, f"{abs_path}/thermal_{base_name}")
         color_fig.savefig(f"{abs_path}/color_{base_name}")
         pseudo_fig.savefig(f"{abs_path}/pseudo_{base_name}")
     else:
         pcv.plot_image(mask_image)
         pcv.plot_image(gaussian_img)
         pcv.plot_image(shape_img)
-        # pcv.plot_image(pseudocolor_img) jarrive pas a afficher ca aled
+        # Thermal Plot don't display :(
         plt.show()
 
 
@@ -228,7 +229,9 @@ def main():
         )
 
         files = []
-        os.makedirs(os.path.abspath(args.dst), exist_ok=True)
+
+        if args.dst:
+            os.makedirs(os.path.abspath(args.dst), exist_ok=True)
 
         if os.path.isdir(args.src):
             files = [
