@@ -230,9 +230,6 @@ def main():
 
         files = []
 
-        if args.dst:
-            os.makedirs(os.path.abspath(args.dst), exist_ok=True)
-
         if os.path.isdir(args.src):
             files = [
                 os.path.join(args.src, f)
@@ -247,6 +244,7 @@ def main():
         # Check if JPG
 
         if args.dst:
+            os.makedirs(os.path.abspath(args.dst), exist_ok=True)
             pcv.params.debug_outdir = os.path.abspath(args.dst)
             save = True
         else:
