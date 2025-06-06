@@ -120,7 +120,12 @@ def img_analyze_thermal(rgb_img, mask):
     return pseudocolor_img
 
 
-def img_gaussian_blur(rgb_img, mask):
+def img_canny_edge(rgb_img):
+    edges_img = pcv.canny_edge_detect(rgb_img, sigma=2)
+    return edges_img
+
+
+def img_gaussian_blur(mask):
     gaussian_img = pcv.gaussian_blur(
         img=mask,
         ksize=(3, 3),
@@ -192,10 +197,10 @@ def transform(src, dst, save):
     v_mask = pcv.threshold.otsu(gray_img=v_gray, object_type="dark")
 
     mask_image = img_apply_mask(rgb_img, a_mask)
-    gaussian_img = img_gaussian_blur(rgb_img, v_mask)
+    gaussian_img = img_gaussian_blur(v_mask)
     color_fig = img_color_histogram(rgb_img, a_mask)
     shape_img = img_roi(rgb_img, a_mask)
-    pseudocolor_fig = img_analyze_thermal(rgb_img, a_mask)
+    edges_img = img_canny_edge(rgb_img)
     top, bottom, center_v = img_pseudolandmarks(rgb_img, a_mask)
     pseudo_fig = generate_pseudolandmarks(rgb_img, top, bottom, center_v)
 
@@ -205,15 +210,15 @@ def transform(src, dst, save):
         pcv.print_image(mask_image, f"{abs_path}/mask_{base_name}")
         pcv.print_image(gaussian_img, f"{abs_path}/gaussian_{base_name}")
         pcv.print_image(shape_img, f"{abs_path}/roi_{base_name}")
-        pcv.print_image(pseudocolor_fig, f"{abs_path}/thermal_{base_name}")
+        pcv.print_image(edges_img, f"{abs_path}/edge_{base_name}")
         color_fig.savefig(f"{abs_path}/color_{base_name}")
         pseudo_fig.savefig(f"{abs_path}/pseudo_{base_name}")
     else:
         pcv.plot_image(mask_image)
         pcv.plot_image(gaussian_img)
         pcv.plot_image(shape_img)
-        # Thermal Plot don't display :(
-        plt.show()
+        pcv.plot_image(edges_img)
+        plt.show(block=False)
 
 
 def main():
@@ -234,14 +239,20 @@ def main():
             files = [
                 os.path.join(args.src, f)
                 for f in os.listdir(args.src)
-                if f.lower().endswith((".jpg", ".jpeg", ".png"))
+                if f.lower().endswith(
+                    (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp")
+                )
             ]
         elif os.path.isfile(args.src):
-            files = [args.src]
+            if args.src.lower().endswith(
+                (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif")
+            ):
+                files = [args.src]
+            else:
+                raise ValueError(f"'{args.src}' is not a valid image file.")
+
         else:
             raise FileNotFoundError
-
-        # Check if JPG
 
         if args.dst:
             os.makedirs(os.path.abspath(args.dst), exist_ok=True)
@@ -255,6 +266,8 @@ def main():
 
     except FileNotFoundError:
         print(f"Error: File '{args.src}' not found.")
+    except ValueError as ve:
+        print(f"ValueError: {ve}")
     except PermissionError:
         print(f"Error: Permission denied for '{args.src}'.")
     except Exception as ex:
