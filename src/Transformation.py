@@ -26,6 +26,42 @@ def parse_args():
         help="Path to the output image(s).",
     )
 
+    parser.add_argument(
+        "--mask",
+        action="store_true",
+        help="Generate mask effect.",
+    )
+
+    parser.add_argument(
+        "--blur",
+        action="store_true",
+        help="Generate Gaussian blur effect.",
+    )
+
+    parser.add_argument(
+        "--histogram",
+        action="store_true",
+        help="Generate color histograms.",
+    )
+
+    parser.add_argument(
+        "--roi",
+        action="store_true",
+        help="Generate region of interest (ROI).",
+    )
+
+    parser.add_argument(
+        "--edge",
+        action="store_true",
+        help="Generate Detect edges.",
+    )
+
+    parser.add_argument(
+        "--pseudolandmarks",
+        action="store_true",
+        help="Generate pseudolandmarks.",
+    )
+
     return parser.parse_args()
 
 
@@ -187,7 +223,7 @@ def generate_pseudolandmarks(rgb_img, top, bottom, center_v):
     return fig
 
 
-def transform(src, dst, save):
+def transform(src, dst, save, args):
     rgb_img, _, _ = pcv.readimage(src)
 
     a_gray = pcv.rgb2gray_lab(rgb_img=rgb_img, channel="a")
@@ -196,29 +232,68 @@ def transform(src, dst, save):
     v_gray = pcv.rgb2gray_hsv(rgb_img=rgb_img, channel="v")
     v_mask = pcv.threshold.otsu(gray_img=v_gray, object_type="dark")
 
-    mask_image = img_apply_mask(rgb_img, a_mask)
-    gaussian_img = img_gaussian_blur(v_mask)
-    color_fig = img_color_histogram(rgb_img, a_mask)
-    shape_img = img_roi(rgb_img, a_mask)
-    edges_img = img_canny_edge(rgb_img)
-    top, bottom, center_v = img_pseudolandmarks(rgb_img, a_mask)
-    pseudo_fig = generate_pseudolandmarks(rgb_img, top, bottom, center_v)
+    if not any(
+        [
+            args.mask,
+            args.blur,
+            args.histogram,
+            args.roi,
+            args.edge,
+            args.pseudolandmarks,
+        ]
+    ):
+        args.mask = True
+        args.blur = True
+        args.histogram = True
+        args.roi = True
+        args.edge = True
+        args.pseudolandmarks = True
 
-    if save:
-        abs_path = os.path.abspath(dst)
-        base_name = os.path.basename(src)
-        pcv.print_image(mask_image, f"{abs_path}/mask_{base_name}")
-        pcv.print_image(gaussian_img, f"{abs_path}/gaussian_{base_name}")
-        pcv.print_image(shape_img, f"{abs_path}/roi_{base_name}")
-        pcv.print_image(edges_img, f"{abs_path}/edge_{base_name}")
-        color_fig.savefig(f"{abs_path}/color_{base_name}")
-        pseudo_fig.savefig(f"{abs_path}/pseudo_{base_name}")
-    else:
-        pcv.plot_image(mask_image)
-        pcv.plot_image(gaussian_img)
-        pcv.plot_image(shape_img)
-        pcv.plot_image(edges_img)
-        plt.show(block=False)
+    abs_path = os.path.abspath(dst)
+    base_name = os.path.basename(src)
+
+    if args.mask:
+        mask_image = img_apply_mask(rgb_img, a_mask)
+        if save:
+            pcv.print_image(mask_image, f"{abs_path}/mask_{base_name}")
+        else:
+            pcv.plot_image(mask_image)
+
+    if args.blur:
+        gaussian_img = img_gaussian_blur(v_mask)
+        if save:
+            pcv.print_image(gaussian_img, f"{abs_path}/gaussian_{base_name}")
+        else:
+            pcv.plot_image(gaussian_img)
+
+    if args.histogram:
+        color_fig = img_color_histogram(rgb_img, a_mask)
+        if save:
+            color_fig.savefig(f"{abs_path}/color_{base_name}")
+        else:
+            plt.show(block=False)
+
+    if args.roi:
+        shape_img = img_roi(rgb_img, a_mask)
+        if save:
+            pcv.print_image(shape_img, f"{abs_path}/roi_{base_name}")
+        else:
+            pcv.plot_image(shape_img)
+
+    if args.edge:
+        edges_img = img_canny_edge(rgb_img)
+        if save:
+            pcv.print_image(edges_img, f"{abs_path}/edge_{base_name}")
+        else:
+            pcv.plot_image(edges_img)
+
+    if args.pseudolandmarks:
+        top, bottom, center_v = img_pseudolandmarks(rgb_img, a_mask)
+        pseudo_fig = generate_pseudolandmarks(rgb_img, top, bottom, center_v)
+        if save:
+            pseudo_fig.savefig(f"{abs_path}/pseudo_{base_name}")
+        else:
+            plt.show(block=False)
 
 
 def main():
@@ -262,7 +337,7 @@ def main():
             save = False
 
         for file in files:
-            transform(file, args.dst, save)
+            transform(file, args.dst, save, args)
 
     except FileNotFoundError:
         print(f"Error: File '{args.src}' not found.")
