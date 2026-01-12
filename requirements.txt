@@ -1,1 +1,6 @@
-matplotlib==3.10.3
+albumentations==2.0.8
+matplotlib==3.10.8
+opencv_python==4.11.0.86
+plantcv==4.7
+torch==2.9.1
+torchvision==0.24.1

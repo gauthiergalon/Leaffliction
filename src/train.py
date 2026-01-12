@@ -30,13 +30,23 @@ def parse_args():
     return parser.parse_args()
 
 
-def data(src_path, dst_path, percent=0.3):
+def data(src_path, dst_path, train_percent=0.7):
+    if not (0.0 < train_percent < 1.0):
+        raise ValueError("train_percent must be between 0.0 and 1.0")
+    val_percent = 1.0 - train_percent
     os.makedirs(dst_path, exist_ok=True)
+    train_dir = os.path.join(dst_path, "train")
+    val_dir = os.path.join(dst_path, "validation")
+    os.makedirs(train_dir, exist_ok=True)
+    os.makedirs(val_dir, exist_ok=True)
     for entry in os.scandir(src_path):
         if entry.is_dir():
             src_dir = entry.path
-            dst_dir = os.path.join(dst_path, entry.name)
-            os.makedirs(dst_dir, exist_ok=True)
+            class_name = entry.name
+            train_class_dir = os.path.join(train_dir, class_name)
+            val_class_dir = os.path.join(val_dir, class_name)
+            os.makedirs(train_class_dir, exist_ok=True)
+            os.makedirs(val_class_dir, exist_ok=True)
             t_args = Namespace(
                 mask=True,
                 blur=True,
@@ -52,20 +62,28 @@ def data(src_path, dst_path, percent=0.3):
                     (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif")
                 )
             ]
-            n_select = max(1, int(len(img_files) * percent))
-            selected_files = random.sample(img_files, n_select)
-            for fname in selected_files:
+            random.shuffle(img_files)
+            n_train = max(1, int(len(img_files) * train_percent))
+            n_val = max(1, int(len(img_files) * val_percent))
+            train_files = img_files[:n_train]
+            val_files = img_files[n_train : n_train + n_val]
+
+            for fname in train_files:
                 src_file = os.path.join(src_dir, fname)
-                shutil.copy2(src_file, dst_dir)
+                shutil.copy2(src_file, train_class_dir)
                 transform(
                     src_file,
-                    dst_dir,
+                    train_class_dir,
                     True,
                     t_args,
                 )
 
+            for fname in val_files:
+                src_file = os.path.join(src_dir, fname)
+                shutil.copy2(src_file, val_class_dir)
 
-def train(model, train_loader, criterion, optimizer, device, num_epochs=10):
+
+def train(model, train_loader, criterion, optimizer, device, num_epochs=5):
     model.train()
 
     for epoch in range(num_epochs):
@@ -120,7 +138,7 @@ def main():
             )
 
             train_data = datasets.ImageFolder(
-                root=tmp_dir,
+                root=os.path.join(tmp_dir, "train"),
                 transform=image_transform,
             )
 
