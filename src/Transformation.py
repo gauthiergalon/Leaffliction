@@ -249,7 +249,12 @@ def transform(src, dst, save, args):
         args.edge = True
         args.pseudolandmarks = True
 
-    abs_path = os.path.abspath(dst)
+    abs_path = None
+    if save:
+        abs_path = os.path.abspath(dst) if dst else os.getcwd()
+        os.makedirs(abs_path, exist_ok=True)
+        pcv.params.debug_outdir = abs_path
+
     base_name = os.path.basename(src)
 
     if args.mask:
@@ -315,7 +320,7 @@ def main():
                 os.path.join(args.src, f)
                 for f in os.listdir(args.src)
                 if f.lower().endswith(
-                    (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp")
+                    (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif")
                 )
             ]
         elif os.path.isfile(args.src):
