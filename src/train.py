@@ -1,18 +1,19 @@
-import signal
-import torch
 import os
+import random
+import shutil
+import signal
+import tempfile
+from argparse import ArgumentParser
+from types import SimpleNamespace as Namespace
+
+import torch
 import torch.nn as nn
 import torch.optim as optim
-import tempfile
-import shutil
-import random
-
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
-from types import SimpleNamespace as Namespace
-from argparse import ArgumentParser
-from Transformation import transform
+
 from cnn import CNN
+from Transformation import transform
 
 
 def parse_args():
@@ -144,9 +145,7 @@ def main():
 
             train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
 
-            device = torch.device(
-                "cuda" if torch.cuda.is_available() else "cpu"
-            )
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             model = CNN(num_classes=len(train_data.classes)).to(device)
 
             criterion = nn.CrossEntropyLoss()
