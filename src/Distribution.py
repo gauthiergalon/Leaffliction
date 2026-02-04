@@ -15,6 +15,7 @@ def parse_args():
 
     parser.add_argument(
         "--path",
+        required=True,
         type=str,
         default=DEFAULT_LOCATION_DATASET,
         help=f"Path to the input dataset. \

@@ -24,6 +24,7 @@ def parse_args():
 
     parser.add_argument(
         "--path",
+        required=True,
         type=str,
         help="Path to the input folder.",
     )
