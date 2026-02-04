@@ -139,7 +139,9 @@ def img_roi(rgb_img, mask):
     height, width, _ = rgb_img.shape
     rect_roi = pcv.roi.rectangle(img=rgb_img, x=0, y=0, h=height, w=width)
     cleaned_mask = pcv.fill(bin_img=mask, size=50)
-    filtered_mask = pcv.roi.filter(mask=cleaned_mask, roi=rect_roi, roi_type="partial")
+    filtered_mask = pcv.roi.filter(
+        mask=cleaned_mask, roi=rect_roi, roi_type="partial"
+    )
     shape_img = pcv.analyze.size(img=rgb_img, labeled_mask=filtered_mask)
     return shape_img
 

@@ -108,7 +108,9 @@ def train(model, train_loader, criterion, optimizer, device, num_epochs=5):
         epoch_loss = running_loss / len(train_loader)
         accuracy = 100 * correct / total
         print(
-            f"Epoch [{epoch + 1}/{num_epochs}], Loss: {epoch_loss:.4f}, Accuracy: {accuracy:.2f}%"
+            f"Epoch [{epoch + 1}/{num_epochs}], \
+              Loss: {epoch_loss:.4f}, \
+              Accuracy: {accuracy:.2f}%"
         )
 
     print("Training completed !")
@@ -146,7 +148,9 @@ def main():
 
             train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
 
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            device = torch.device(
+                "cuda" if torch.cuda.is_available() else "cpu"
+            )
             model = CNN(num_classes=len(train_data.classes)).to(device)
 
             criterion = nn.CrossEntropyLoss()
