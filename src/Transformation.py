@@ -1,9 +1,27 @@
-import os
 from argparse import ArgumentParser
+from pathlib import Path
 
 import cv2
 from matplotlib import pyplot as plt
 from plantcv import plantcv as pcv
+
+HIST_COLORS = [
+    "blue",
+    "green",
+    "red",
+    "purple",
+    "cyan",
+    "orange",
+    "grey",
+    "pink",
+    "yellow",
+]
+
+HIST_CHANNELS = [
+    (cv2.COLOR_BGR2RGB, ["blue", "green", "red"], "RGB"),
+    (cv2.COLOR_BGR2HSV, ["hue", "saturation", "value"], "HSV"),
+    (cv2.COLOR_BGR2LAB, ["L*", "a*", "b*"], "LAB"),
+]
 
 
 def parse_args():
@@ -11,326 +29,248 @@ def parse_args():
         prog="Transformation",
         description="Image transformation.",
     )
-
     parser.add_argument(
         "--input",
-        type=str,
+        type=Path,
         required=True,
         help="Path to the input image or images folder.",
     )
-
     parser.add_argument(
         "--output",
-        type=str,
+        type=Path,
         required=False,
         help="Path to the output image(s).",
     )
-
-    parser.add_argument(
-        "--mask",
-        action="store_true",
-        help="Generate mask effect.",
-    )
-
-    parser.add_argument(
-        "--blur",
-        action="store_true",
-        help="Generate Gaussian blur effect.",
-    )
-
-    parser.add_argument(
-        "--histogram",
-        action="store_true",
-        help="Generate color histograms.",
-    )
-
-    parser.add_argument(
-        "--roi",
-        action="store_true",
-        help="Generate region of interest (ROI).",
-    )
-
-    parser.add_argument(
-        "--edge",
-        action="store_true",
-        help="Generate Detect edges.",
-    )
-
-    parser.add_argument(
-        "--pseudolandmarks",
-        action="store_true",
-        help="Generate pseudolandmarks.",
-    )
-
     return parser.parse_args()
 
 
-def img_color_histogram(rgb_img, mask):
-    total_masked_pixels = cv2.countNonZero(mask)
-    if total_masked_pixels == 0:
+def get_histogram_data(rgb_img, mask):
+    if cv2.countNonZero(mask) == 0:
         return None
 
-    _, rgb_data = pcv.visualize.histogram(
-        img=rgb_img,
-        mask=mask,
-        hist_data=True,
-    )
-    hsv_img = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2HSV)
-    _, hsv_data = pcv.visualize.histogram(
-        img=hsv_img,
-        mask=mask,
-        hist_data=True,
-    )
-    lab_img = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2LAB)
-    _, lab_data = pcv.visualize.histogram(
-        img=lab_img,
-        mask=mask,
-        hist_data=True,
-    )
+    all_data = []
+    for conversion, names, space in HIST_CHANNELS:
+        converted = (
+            rgb_img if space == "RGB" else cv2.cvtColor(rgb_img, conversion)
+        )
+        _, data = pcv.visualize.histogram(
+            img=converted,
+            mask=mask,
+            hist_data=True,
+        )
+        all_data.append((data, names, space))
+    return all_data
 
-    all_data = [
-        (rgb_data, ["blue", "green", "red"], "RGB"),
-        (hsv_data, ["hue", "saturation", "value"], "HSV"),
-        (lab_data, ["L*", "a*", "b*"], "LAB"),
-    ]
 
-    fig = plt.figure(figsize=(15, 7))
-
-    colors = [
-        "blue",
-        "green",
-        "red",
-        "purple",
-        "cyan",
-        "orange",
-        "grey",
-        "pink",
-        "yellow",
-    ]
-
+def plot_histogram(ax, all_data):
     color_index = 0
-    for data_tuple in all_data:
-        hist_data, channel_names, space_name = data_tuple
-        channels_in_space = hist_data["color channel"].unique()
-
-        for i, channel_key in enumerate(channels_in_space):
-            channel_plot_data = hist_data[
-                hist_data["color channel"] == channel_key
-            ].copy()
-
-            plt.plot(
-                channel_plot_data["pixel intensity"],
-                channel_plot_data["proportion of pixels (%)"],
+    for hist_data, channel_names, space_name in all_data:
+        for i, ch_key in enumerate(hist_data["color channel"].unique()):
+            ch_data = hist_data[hist_data["color channel"] == ch_key]
+            ax.plot(
+                ch_data["pixel intensity"],
+                ch_data["proportion of pixels (%)"],
                 label=f"{channel_names[i]} ({space_name})",
-                color=colors[color_index],
+                color=HIST_COLORS[color_index],
             )
             color_index += 1
-
-    plt.xlabel("Pixel intensity")
-    plt.ylabel("Proportion of pixels (%)")
-    plt.legend(loc="center right")
-    plt.grid(True)
-
-    return fig
+    ax.set_xlabel("Pixel intensity")
+    ax.set_ylabel("Proportion of pixels (%)")
+    ax.legend(loc="center right", fontsize=8)
+    ax.grid(True)
 
 
-def img_roi(rgb_img, mask):
-    height, width, _ = rgb_img.shape
-    rect_roi = pcv.roi.rectangle(img=rgb_img, x=0, y=0, h=height, w=width)
-    cleaned_mask = pcv.fill(bin_img=mask, size=50)
-    filtered_mask = pcv.roi.filter(
-        mask=cleaned_mask, roi=rect_roi, roi_type="partial"
-    )
-    shape_img = pcv.analyze.size(img=rgb_img, labeled_mask=filtered_mask)
-    return shape_img
+def plot_pseudolandmarks(ax, rgb_img, top, bottom, center_v):
+    ax.imshow(cv2.cvtColor(rgb_img, cv2.COLOR_BGR2RGB))
+    for landmarks, color, label in [
+        (top, "blue", "Top"),
+        (bottom, "magenta", "Bottom"),
+        (center_v, "orange", "Center V"),
+    ]:
+        x = [lm[0][0] for lm in landmarks]
+        y = [lm[0][1] for lm in landmarks]
+        ax.scatter(x, y, color=color, label=label, s=50)
+    ax.legend(loc="upper right", fontsize=8)
+    ax.axis("off")
 
 
-def img_analyze_thermal(rgb_img, mask):
-    gray_img = pcv.rgb2gray(rgb_img=rgb_img)
-    pseudocolor_img = pcv.visualize.pseudocolor(
-        gray_img,
-        min_value=0,
-        max_value=100,
-        mask=mask,
-    )
-    return pseudocolor_img
-
-
-def img_canny_edge(rgb_img):
-    edges_img = pcv.canny_edge_detect(rgb_img, sigma=2)
-    return edges_img
-
-
-def img_gaussian_blur(mask):
-    gaussian_img = pcv.gaussian_blur(
-        img=mask,
-        ksize=(3, 3),
-    )
-    return gaussian_img
-
-
-def img_apply_mask(rgb_img, mask):
-    mask_image = pcv.apply_mask(img=rgb_img, mask=mask, mask_color="white")
-    return mask_image
-
-
-def img_pseudolandmarks(rgb_img, mask):
-    top, bottom, center_v = pcv.homology.x_axis_pseudolandmarks(
-        img=rgb_img,
-        mask=mask,
-    )
-    return top, bottom, center_v
-
-
-def extract_coordinates(landmarks):
-    x_coords = [landmark[0][0] for landmark in landmarks]
-    y_coords = [landmark[0][1] for landmark in landmarks]
-
-    return x_coords, y_coords
-
-
-def generate_pseudolandmarks(rgb_img, top, bottom, center_v):
-    top_x, top_y = extract_coordinates(top)
-    bottom_x, bottom_y = extract_coordinates(bottom)
-    center_v_x, center_v_y = extract_coordinates(center_v)
-
-    fig = plt.figure(figsize=(10, 10))
-    plt.imshow(cv2.cvtColor(rgb_img, cv2.COLOR_BGR2RGB))
-    plt.scatter(
-        top_x,
-        top_y,
-        color="blue",
-        label="Top Landmark",
-        s=100,
-    )
-    plt.scatter(
-        bottom_x,
-        bottom_y,
-        color="magenta",
-        label="Bottom Landmark",
-        s=100,
-    )
-    plt.scatter(
-        center_v_x,
-        center_v_y,
-        color="orange",
-        label="Center Vertical Landmark",
-        s=100,
-    )
-    plt.legend(loc="upper right")
-    plt.title("Pseudolandmarks on Image")
-    plt.axis("off")
-    return fig
-
-
-def transform(input, output, save, args):
-    rgb_img, _, _ = pcv.readimage(input)
-
+def compute_masks(rgb_img):
     a_gray = pcv.rgb2gray_lab(rgb_img=rgb_img, channel="a")
     a_mask = pcv.threshold.otsu(gray_img=a_gray, object_type="dark")
-
     v_gray = pcv.rgb2gray_hsv(rgb_img=rgb_img, channel="v")
     v_mask = pcv.threshold.otsu(gray_img=v_gray, object_type="dark")
+    return a_mask, v_mask
 
-    if not any(
-        [
-            args.mask,
-            args.blur,
-            args.histogram,
-            args.roi,
-            args.edge,
-            args.pseudolandmarks,
-        ]
-    ):
-        args.mask = True
-        args.blur = True
-        args.histogram = True
-        args.roi = True
-        args.edge = True
-        args.pseudolandmarks = True
 
-    abs_path = None
+def compute_transformations(rgb_img, a_mask, v_mask):
+    mask_image = pcv.apply_mask(img=rgb_img, mask=a_mask, mask_color="white")
+    gaussian_img = pcv.gaussian_blur(img=v_mask, ksize=(3, 3))
+
+    h, w = rgb_img.shape[:2]
+    rect_roi = pcv.roi.rectangle(img=rgb_img, x=0, y=0, h=h, w=w)
+    cleaned = pcv.fill(bin_img=a_mask, size=50)
+    filtered = pcv.roi.filter(mask=cleaned, roi=rect_roi, roi_type="partial")
+    shape_img = pcv.analyze.size(img=rgb_img, labeled_mask=filtered)
+
+    edges_img = pcv.canny_edge_detect(rgb_img, sigma=2)
+
+    top, bottom, center_v = pcv.homology.x_axis_pseudolandmarks(
+        img=rgb_img,
+        mask=a_mask,
+    )
+
+    return (
+        mask_image,
+        gaussian_img,
+        shape_img,
+        edges_img,
+        top,
+        bottom,
+        center_v,
+    )
+
+
+def save_images(
+    output,
+    base_name,
+    rgb_img,
+    a_mask,
+    mask_image,
+    gaussian_img,
+    shape_img,
+    edges_img,
+    top,
+    bottom,
+    center_v,
+):
+    pcv.print_image(mask_image, f"{output}/mask_{base_name}")
+    pcv.print_image(gaussian_img, f"{output}/gaussian_{base_name}")
+    pcv.print_image(shape_img, f"{output}/roi_{base_name}")
+    pcv.print_image(edges_img, f"{output}/edge_{base_name}")
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+    plot_pseudolandmarks(ax, rgb_img, top, bottom, center_v)
+    ax.set_title("Pseudolandmarks on Image")
+    fig.savefig(f"{output}/pseudo_{base_name}", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    all_data = get_histogram_data(rgb_img, a_mask)
+    if all_data:
+        fig, ax = plt.subplots(figsize=(15, 7))
+        plot_histogram(ax, all_data)
+        fig.savefig(
+            f"{output}/histogram_{base_name}",
+            dpi=150,
+            bbox_inches="tight",
+        )
+        plt.close(fig)
+
+
+def show_composite(
+    rgb_img,
+    a_mask,
+    mask_image,
+    gaussian_img,
+    shape_img,
+    edges_img,
+    top,
+    bottom,
+    center_v,
+):
+    fig = plt.figure(figsize=(12, 12))
+
+    panels = [
+        (1, cv2.cvtColor(rgb_img, cv2.COLOR_BGR2RGB), "Original", {}),
+        (2, cv2.cvtColor(mask_image, cv2.COLOR_BGR2RGB), "Mask", {}),
+        (3, gaussian_img, "Gaussian Blur", {"cmap": "gray"}),
+        (4, cv2.cvtColor(shape_img, cv2.COLOR_BGR2RGB), "ROI", {}),
+        (5, edges_img, "Canny Edges", {"cmap": "gray"}),
+    ]
+
+    for pos, img, title, kwargs in panels:
+        ax = fig.add_subplot(3, 3, pos)
+        ax.imshow(img, **kwargs)
+        ax.set_title(title)
+        ax.axis("off")
+
+    ax6 = fig.add_subplot(3, 3, 6)
+    plot_pseudolandmarks(ax6, rgb_img, top, bottom, center_v)
+    ax6.set_title("Pseudolandmarks")
+
+    all_data = get_histogram_data(rgb_img, a_mask)
+    if all_data:
+        ax7 = fig.add_subplot(3, 3, (7, 9))
+        plot_histogram(ax7, all_data)
+        ax7.set_title("Color Histograms")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def transform(input, output, save):
+    rgb_img, _, _ = pcv.readimage(input)
+    a_mask, v_mask = compute_masks(rgb_img)
+    results = compute_transformations(rgb_img, a_mask, v_mask)
+    mask_image, gaussian_img, shape_img, edges_img, top, bottom, center_v = (
+        results
+    )
+
     if save:
-        abs_path = os.path.abspath(output) if output else os.getcwd()
-        os.makedirs(abs_path, exist_ok=True)
-        pcv.params.debug_outdir = abs_path
-
-    base_name = os.path.basename(input)
-
-    if args.mask:
-        mask_image = img_apply_mask(rgb_img, a_mask)
-        if save:
-            pcv.print_image(mask_image, f"{abs_path}/mask_{base_name}")
-        else:
-            pcv.plot_image(mask_image)
-
-    if args.blur:
-        gaussian_img = img_gaussian_blur(v_mask)
-        if save:
-            pcv.print_image(gaussian_img, f"{abs_path}/gaussian_{base_name}")
-        else:
-            pcv.plot_image(gaussian_img)
-
-    if args.histogram:
-        color_fig = img_color_histogram(rgb_img, a_mask)
-        if save:
-            color_fig.savefig(f"{abs_path}/color_{base_name}")
-        else:
-            plt.show(block=False)
-
-    if args.roi:
-        shape_img = img_roi(rgb_img, a_mask)
-        if save:
-            pcv.print_image(shape_img, f"{abs_path}/roi_{base_name}")
-        else:
-            pcv.plot_image(shape_img)
-
-    if args.edge:
-        edges_img = img_canny_edge(rgb_img)
-        if save:
-            pcv.print_image(edges_img, f"{abs_path}/edge_{base_name}")
-        else:
-            pcv.plot_image(edges_img)
-
-    if args.pseudolandmarks:
-        top, bottom, center_v = img_pseudolandmarks(rgb_img, a_mask)
-        pseudo_fig = generate_pseudolandmarks(rgb_img, top, bottom, center_v)
-        if save:
-            pseudo_fig.savefig(f"{abs_path}/pseudo_{base_name}")
-        else:
-            plt.show(block=False)
+        save_images(
+            output,
+            Path(input).name,
+            rgb_img,
+            a_mask,
+            mask_image,
+            gaussian_img,
+            shape_img,
+            edges_img,
+            top,
+            bottom,
+            center_v,
+        )
+    else:
+        show_composite(
+            rgb_img,
+            a_mask,
+            mask_image,
+            gaussian_img,
+            shape_img,
+            edges_img,
+            top,
+            bottom,
+            center_v,
+        )
 
 
 def main():
     args = parse_args()
 
     try:
-        files = []
-
-        if os.path.isdir(args.input):
+        if args.input.is_dir():
             files = [
-                os.path.join(args.input, f)
-                for f in os.listdir(args.input)
-                if f.lower().endswith(".jpg")
+                f for f in args.input.iterdir() if f.suffix.lower() == ".jpg"
             ]
-        elif os.path.isfile(args.input):
-            if args.input.lower().endswith(".jpg"):
-                files = [args.input]
-            else:
+            if not args.output:
+                raise ValueError(
+                    "Output path must be specified when input is a directory."
+                )
+            args.output.mkdir(parents=True, exist_ok=True)
+            pcv.params.debug_outdir = args.output
+            save = True
+        elif args.input.is_file():
+            if args.input.suffix.lower() != ".jpg":
                 raise ValueError(f"'{args.input}' is not a valid image file.")
-
+            files = [args.input]
+            save = bool(args.output)
+            if args.output:
+                args.output.mkdir(parents=True, exist_ok=True)
+                pcv.params.debug_outdir = args.output
         else:
             raise FileNotFoundError
 
-        if args.output:
-            os.makedirs(os.path.abspath(args.output), exist_ok=True)
-            pcv.params.debug_outdir = os.path.abspath(args.output)
-            save = True
-        else:
-            save = False
-
         for file in files:
-            transform(file, args.output, save, args)
+            transform(file, args.output, save)
 
     except FileNotFoundError:
         print(f"Error: File '{args.input}' not found.")

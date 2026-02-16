@@ -10,33 +10,6 @@ DEFAULT_INPUT_LOCATION = Path("images/")
 DEFAULT_OUTPUT_LOCATION = Path("augmented_directory/")
 
 
-def parse_args():
-    parser = ArgumentParser(
-        prog="Augmentation",
-        description=(
-            "Applies image augmentations. "
-            "If the input is a single image, it displays and saves augmented images. "
-            "If the input is a directory with subdirectories, it balances images across classes and saves them."
-        ),
-    )
-
-    parser.add_argument(
-        "--input",
-        default=DEFAULT_INPUT_LOCATION,
-        type=Path,
-        help="Path to the input image or directory containing images.",
-    )
-
-    parser.add_argument(
-        "--output",
-        default=DEFAULT_OUTPUT_LOCATION,
-        type=Path,
-        help="Path to the directory to save augmented images.",
-    )
-
-    return parser.parse_args()
-
-
 def augment(image, transform):
     if transform:
         return transform(image=image)["image"]
@@ -118,22 +91,47 @@ def unique_directory(directory_path):
         counter += 1
 
 
-def main():
-    args = parse_args()
+def parse_args():
+    parser = ArgumentParser(
+        prog="Augmentation",
+        description=(
+            "Applies image augmentations. "
+            "If the input is a single image, it displays and saves augmented images. "
+            "If the input is a directory with subdirectories, it balances images across classes and saves them."
+        ),
+    )
 
+    parser.add_argument(
+        "--input",
+        default=DEFAULT_INPUT_LOCATION,
+        type=Path,
+        help="Path to the input image or directory containing images.",
+    )
+
+    parser.add_argument(
+        "--output",
+        default=DEFAULT_OUTPUT_LOCATION,
+        type=Path,
+        help="Path to the directory to save augmented images.",
+    )
+
+    return parser.parse_args()
+
+
+def augmentation(input, output):
     try:
-        if not args.input.exists():
+        if not input.exists():
             raise FileNotFoundError
 
-        args.output = unique_directory(args.output)
+        output = unique_directory(output)
 
-        if args.input.is_dir():
+        if input.is_dir():
             is_file = False
-            images_copy, images_augment = balance_classes(args.input)
-            copy(images_copy, args.input, args.output)
+            images_copy, images_augment = balance_classes(input)
+            copy(images_copy, input, output)
         else:
             is_file = True
-            images_augment = {args.input.parent.name: [args.input.name]}
+            images_augment = {input.parent.name: [input.name]}
 
         augmentation_names = [
             "Original",
@@ -165,9 +163,7 @@ def main():
                 )
 
                 image = cv2.imread(
-                    args.input
-                    if is_file
-                    else args.input / class_name / file_name
+                    input if is_file else input / class_name / file_name
                 )
 
                 augmentation_effects[3] = A.RandomCrop(
@@ -181,7 +177,7 @@ def main():
                 ):
                     augmented_image = augment(image, augmentation_effect)
                     save(
-                        args.output
+                        output
                         / class_name
                         / f"{base_name}_{augmentation_name}{extension}",
                         augmented_image,
@@ -193,11 +189,11 @@ def main():
                     display_images(images, augmentation_names)
 
     except FileNotFoundError:
-        print(f"Error: File or directory '{args.input}' not found.")
+        print(f"Error: File or directory '{input}' not found.")
     except FileExistsError:
-        print(f"Error: Directory '{args.output}' already exists.")
+        print(f"Error: Directory '{output}' already exists.")
     except PermissionError:
-        print(f"Error: Permission denied for '{args.input}'.")
+        print(f"Error: Permission denied for '{input}'.")
     except KeyboardInterrupt:
         print("Leaffliction: CTRL+C sent by user.")
     except Exception as ex:
@@ -205,4 +201,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    augmentation(args.input, args.output)

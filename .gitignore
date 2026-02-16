@@ -4,5 +4,6 @@ venv/
 
 .ruff_cache/
 
-images
+/images
 augmented_directory*
+leaffliction.zip

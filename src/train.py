@@ -1,9 +1,8 @@
-import os
 import random
 import shutil
 import tempfile
 from argparse import ArgumentParser
-from types import SimpleNamespace as Namespace
+from pathlib import Path
 
 import torch
 import torch.nn as nn
@@ -12,7 +11,8 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 from cnn import CNN
-from Transformation import transform
+
+from Augmentation import augmentation
 
 
 def parse_args():
@@ -22,46 +22,38 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--path",
+        "--input",
         required=True,
         type=str,
-        help="Path to the input folder.",
+        help="Path to the input dataset.",
     )
 
     return parser.parse_args()
 
 
-def data(src_path, dst_path, train_percent=0.7):
+def data(src_path, dst_path, train_percent=0.80):
     if not (0.0 < train_percent < 1.0):
         raise ValueError("train_percent must be between 0.0 and 1.0")
     val_percent = 1.0 - train_percent
-    os.makedirs(dst_path, exist_ok=True)
-    train_dir = os.path.join(dst_path, "train")
-    val_dir = os.path.join(dst_path, "validation")
-    os.makedirs(train_dir, exist_ok=True)
-    os.makedirs(val_dir, exist_ok=True)
-    for entry in os.scandir(src_path):
+    dst_path = Path(dst_path)
+    dst_path.mkdir(parents=True, exist_ok=True)
+    train_dir = dst_path / "train_temp"
+    val_dir = dst_path / "validation"
+    train_dir.mkdir(parents=True, exist_ok=True)
+    val_dir.mkdir(parents=True, exist_ok=True)
+    src_path = Path(src_path)
+    for entry in src_path.iterdir():
         if entry.is_dir():
-            src_dir = entry.path
+            src_dir = entry
             class_name = entry.name
-            train_class_dir = os.path.join(train_dir, class_name)
-            val_class_dir = os.path.join(val_dir, class_name)
-            os.makedirs(train_class_dir, exist_ok=True)
-            os.makedirs(val_class_dir, exist_ok=True)
-            t_args = Namespace(
-                mask=True,
-                blur=True,
-                histogram=False,
-                roi=True,
-                edge=True,
-                pseudolandmarks=False,
-            )
+            train_class_dir = train_dir / class_name
+            val_class_dir = val_dir / class_name
+            train_class_dir.mkdir(parents=True, exist_ok=True)
+            val_class_dir.mkdir(parents=True, exist_ok=True)
             img_files = [
-                fname
-                for fname in os.listdir(src_dir)
-                if fname.lower().endswith(
-                    (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif")
-                )
+                f.name
+                for f in src_dir.iterdir()
+                if f.name.lower().endswith(".jpg")
             ]
             random.shuffle(img_files)
             n_train = max(1, int(len(img_files) * train_percent))
@@ -70,18 +62,15 @@ def data(src_path, dst_path, train_percent=0.7):
             val_files = img_files[n_train : n_train + n_val]
 
             for fname in train_files:
-                src_file = os.path.join(src_dir, fname)
+                src_file = src_dir / fname
                 shutil.copy2(src_file, train_class_dir)
-                transform(
-                    src_file,
-                    train_class_dir,
-                    True,
-                    t_args,
-                )
 
             for fname in val_files:
-                src_file = os.path.join(src_dir, fname)
+                src_file = src_dir / fname
                 shutil.copy2(src_file, val_class_dir)
+
+    augmentation(train_dir, dst_path / "train")
+    shutil.rmtree(train_dir)
 
 
 def train(model, train_loader, criterion, optimizer, device, num_epochs=5):
@@ -119,11 +108,11 @@ def main():
     args = parse_args()
 
     try:
-        if not os.path.isdir(args.path):
+        if not Path(args.input).is_dir():
             raise FileNotFoundError
 
         with tempfile.TemporaryDirectory() as tmp_dir:
-            data(args.path, tmp_dir)
+            data(args.input, tmp_dir)
 
             image_transform = transforms.Compose(
                 [
@@ -133,7 +122,7 @@ def main():
             )
 
             train_data = datasets.ImageFolder(
-                root=os.path.join(tmp_dir, "train"),
+                root=str(Path(tmp_dir) / "train"),
                 transform=image_transform,
             )
 
@@ -156,16 +145,16 @@ def main():
                 num_epochs=10,
             )
 
-            model_path = os.path.join(tmp_dir, "model.pth")
+            model_path = Path(tmp_dir) / "model.pth"
             torch.save(model.state_dict(), model_path)
 
             zip_path = shutil.make_archive("leaffliction", "zip", tmp_dir)
             print(f"Saved zip: {zip_path}")
 
     except FileNotFoundError:
-        print(f"Error: Folder '{args.path}' not found.")
+        print(f"Error: Folder '{args.input}' not found.")
     except PermissionError:
-        print(f"Error: Permission denied for '{args.path}'.")
+        print(f"Error: Permission denied for '{args.input}'.")
     except KeyboardInterrupt:
         print("Leaffliction: CTRL+C sent by user.")
     except Exception as ex:
