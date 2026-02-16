@@ -13,14 +13,14 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--src",
+        "--input",
         type=str,
         required=True,
         help="Path to the input image or images folder.",
     )
 
     parser.add_argument(
-        "--dst",
+        "--output",
         type=str,
         required=False,
         help="Path to the output image(s).",
@@ -223,8 +223,8 @@ def generate_pseudolandmarks(rgb_img, top, bottom, center_v):
     return fig
 
 
-def transform(src, dst, save, args):
-    rgb_img, _, _ = pcv.readimage(src)
+def transform(input, output, save, args):
+    rgb_img, _, _ = pcv.readimage(input)
 
     a_gray = pcv.rgb2gray_lab(rgb_img=rgb_img, channel="a")
     a_mask = pcv.threshold.otsu(gray_img=a_gray, object_type="dark")
@@ -251,11 +251,11 @@ def transform(src, dst, save, args):
 
     abs_path = None
     if save:
-        abs_path = os.path.abspath(dst) if dst else os.getcwd()
+        abs_path = os.path.abspath(output) if output else os.getcwd()
         os.makedirs(abs_path, exist_ok=True)
         pcv.params.debug_outdir = abs_path
 
-    base_name = os.path.basename(src)
+    base_name = os.path.basename(input)
 
     if args.mask:
         mask_image = img_apply_mask(rgb_img, a_mask)
@@ -307,41 +307,41 @@ def main():
     try:
         files = []
 
-        if os.path.isdir(args.src):
+        if os.path.isdir(args.input):
             files = [
-                os.path.join(args.src, f)
-                for f in os.listdir(args.src)
+                os.path.join(args.input, f)
+                for f in os.listdir(args.input)
                 if f.lower().endswith(
                     (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif")
                 )
             ]
-        elif os.path.isfile(args.src):
-            if args.src.lower().endswith(
+        elif os.path.isfile(args.input):
+            if args.input.lower().endswith(
                 (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif")
             ):
-                files = [args.src]
+                files = [args.input]
             else:
-                raise ValueError(f"'{args.src}' is not a valid image file.")
+                raise ValueError(f"'{args.input}' is not a valid image file.")
 
         else:
             raise FileNotFoundError
 
-        if args.dst:
-            os.makedirs(os.path.abspath(args.dst), exist_ok=True)
-            pcv.params.debug_outdir = os.path.abspath(args.dst)
+        if args.output:
+            os.makedirs(os.path.abspath(args.output), exist_ok=True)
+            pcv.params.debug_outdir = os.path.abspath(args.output)
             save = True
         else:
             save = False
 
         for file in files:
-            transform(file, args.dst, save, args)
+            transform(file, args.output, save, args)
 
     except FileNotFoundError:
-        print(f"Error: File '{args.src}' not found.")
+        print(f"Error: File '{args.input}' not found.")
     except ValueError as ve:
         print(f"ValueError: {ve}")
     except PermissionError:
-        print(f"Error: Permission denied for '{args.src}'.")
+        print(f"Error: Permission denied for '{args.input}'.")
     except KeyboardInterrupt:
         print("Leaffliction: CTRL+C sent by user.")
     except Exception as ex:
