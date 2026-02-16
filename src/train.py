@@ -1,7 +1,6 @@
 import os
 import random
 import shutil
-import signal
 import tempfile
 from argparse import ArgumentParser
 from types import SimpleNamespace as Namespace
@@ -120,14 +119,6 @@ def main():
     args = parse_args()
 
     try:
-        signal.signal(
-            signal.SIGINT,
-            lambda *_: (
-                print("\033[2DLeaffliction: CTRL+C sent by user."),
-                exit(1),
-            ),
-        )
-
         if not os.path.isdir(args.path):
             raise FileNotFoundError
 
@@ -175,6 +166,8 @@ def main():
         print(f"Error: Folder '{args.path}' not found.")
     except PermissionError:
         print(f"Error: Permission denied for '{args.path}'.")
+    except KeyboardInterrupt:
+        print("Leaffliction: CTRL+C sent by user.")
     except Exception as ex:
         print(f"Unexpected error occured : {ex}")
 

@@ -1,10 +1,8 @@
-import os
-import signal
+from pathlib import Path
 from argparse import ArgumentParser
-
 import matplotlib.pyplot as plt
 
-DEFAULT_LOCATION_DATASET = "images/"
+DEFAULT_INPUT_LOCATION = "images/"
 
 
 def parse_args():
@@ -14,12 +12,12 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--path",
+        "--input",
         required=True,
-        type=str,
-        default=DEFAULT_LOCATION_DATASET,
+        type=Path,
+        default=DEFAULT_INPUT_LOCATION,
         help=f"Path to the input dataset. \
-                Defaults to '{DEFAULT_LOCATION_DATASET}' if not specified.",
+                Defaults to '{DEFAULT_INPUT_LOCATION}' if not specified.",
     )
 
     return parser.parse_args()
@@ -29,24 +27,15 @@ def main():
     args = parse_args()
 
     try:
-        signal.signal(
-            signal.SIGINT,
-            lambda *_: (
-                print("\033[2DLeaffliction: CTRL+C sent by user."),
-                exit(1),
-            ),
-        )
-
         categories = {
             entry.name: len(
                 [
                     file
-                    for file in os.listdir(entry.path)
-                    if os.path.isfile(os.path.join(entry.path, file))
-                    and file.lower().endswith(".jpg")
+                    for file in entry.iterdir()
+                    if file.is_file() and file.suffix.lower() == ".jpg"
                 ]
             )
-            for entry in os.scandir(args.path)
+            for entry in args.input.iterdir()
             if entry.is_dir()
         }
 
@@ -65,9 +54,11 @@ def main():
         plt.show()
 
     except FileNotFoundError:
-        print(f"Error: File '{args.path}' not found.")
+        print(f"Error: File '{args.input}' not found.")
     except PermissionError:
-        print(f"Error: Permission denied for '{args.path}'.")
+        print(f"Error: Permission denied for '{args.input}'.")
+    except KeyboardInterrupt:
+        print("Leaffliction: CTRL+C sent by user.")
     except Exception as ex:
         print(f"Unexpected error occured : {ex}")
 

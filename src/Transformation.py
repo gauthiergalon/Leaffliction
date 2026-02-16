@@ -1,5 +1,4 @@
 import os
-import signal
 from argparse import ArgumentParser
 
 import cv2
@@ -306,14 +305,6 @@ def main():
     args = parse_args()
 
     try:
-        signal.signal(
-            signal.SIGINT,
-            lambda *_: (
-                print("\033[2DLeaffliction: CTRL+C sent by user."),
-                exit(1),
-            ),
-        )
-
         files = []
 
         if os.path.isdir(args.src):
@@ -351,6 +342,8 @@ def main():
         print(f"ValueError: {ve}")
     except PermissionError:
         print(f"Error: Permission denied for '{args.src}'.")
+    except KeyboardInterrupt:
+        print("Leaffliction: CTRL+C sent by user.")
     except Exception as ex:
         print(f"Unexpected error occured : {ex}")
 
