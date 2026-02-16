@@ -13,7 +13,6 @@ def parse_args():
 
     parser.add_argument(
         "--input",
-        required=True,
         type=Path,
         default=DEFAULT_INPUT_LOCATION,
         help=f"Path to the input dataset. \
@@ -54,7 +53,7 @@ def main():
         plt.show()
 
     except FileNotFoundError:
-        print(f"Error: File '{args.input}' not found.")
+        print(f"Error: Directory '{args.input}' not found.")
     except PermissionError:
         print(f"Error: Permission denied for '{args.input}'.")
     except KeyboardInterrupt:

@@ -6,7 +6,8 @@ import cv2
 import shutil
 import random
 
-DEFAULT_OUTPUT_LOCATION = Path("augmented_directory")
+DEFAULT_INPUT_LOCATION = Path("images/")
+DEFAULT_OUTPUT_LOCATION = Path("augmented_directory/")
 
 
 def parse_args():
@@ -21,14 +22,13 @@ def parse_args():
 
     parser.add_argument(
         "--input",
-        required=True,
+        default=DEFAULT_INPUT_LOCATION,
         type=Path,
         help="Path to the input image or directory containing images.",
     )
 
     parser.add_argument(
         "--output",
-        required=False,
         default=DEFAULT_OUTPUT_LOCATION,
         type=Path,
         help="Path to the directory to save augmented images.",
@@ -193,7 +193,7 @@ def main():
                     display_images(images, augmentation_names)
 
     except FileNotFoundError:
-        print(f"Error: File '{args.input}' not found.")
+        print(f"Error: File or directory '{args.input}' not found.")
     except FileExistsError:
         print(f"Error: Directory '{args.output}' already exists.")
     except PermissionError:

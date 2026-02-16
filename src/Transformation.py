@@ -311,14 +311,10 @@ def main():
             files = [
                 os.path.join(args.input, f)
                 for f in os.listdir(args.input)
-                if f.lower().endswith(
-                    (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif")
-                )
+                if f.lower().endswith(".jpg")
             ]
         elif os.path.isfile(args.input):
-            if args.input.lower().endswith(
-                (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif")
-            ):
+            if args.input.lower().endswith(".jpg"):
                 files = [args.input]
             else:
                 raise ValueError(f"'{args.input}' is not a valid image file.")
