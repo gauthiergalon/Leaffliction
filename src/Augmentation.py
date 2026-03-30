@@ -1,10 +1,11 @@
+import random
+import shutil
 from argparse import ArgumentParser
 from pathlib import Path
+
 import albumentations as A
-import matplotlib.pyplot as plt
 import cv2
-import shutil
-import random
+import matplotlib.pyplot as plt
 
 DEFAULT_INPUT_LOCATION = Path("images/")
 DEFAULT_OUTPUT_LOCATION = Path("augmented_directory/")
@@ -96,8 +97,10 @@ def parse_args():
         prog="Augmentation",
         description=(
             "Applies image augmentations. "
-            "If the input is a single image, it displays and saves augmented images. "
-            "If the input is a directory with subdirectories, it balances images across classes and saves them."
+            "If the input is a single image, it displays and "
+            "saves augmented images."
+            "If the input is a directory with subdirectories, it balances "
+            "across classes and saves them."
         ),
     )
 

@@ -10,9 +10,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
-from cnn import CNN
-
 from Augmentation import augmentation
+from cnn import CNN
 
 
 def parse_args():
@@ -59,7 +58,7 @@ def data(src_path, dst_path, train_percent=0.80):
             n_train = max(1, int(len(img_files) * train_percent))
             n_val = max(1, int(len(img_files) * val_percent))
             train_files = img_files[:n_train]
-            val_files = img_files[n_train : n_train + n_val]
+            val_files = img_files[n_train : n_train + n_val]  # noqa: E203
 
             for fname in train_files:
                 src_file = src_dir / fname
