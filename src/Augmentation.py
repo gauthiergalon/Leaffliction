@@ -66,16 +66,16 @@ def balance_classes(input, inplace=False):
 
         for key, val in categories.items():
             size = len(val)
-            if size > target - NUMBER_TRANSFORMATION + 1:
+            if size >= target:
                 to_copy[key] = random.sample(val, target)
-            elif size < target - NUMBER_TRANSFORMATION + 1:
-                diff = target - size
-                to_augment[key] = random.sample(
-                    val, int(diff // NUMBER_TRANSFORMATION)
-                )
-                to_copy[key] = [x for x in val if x not in to_augment[key]]
-            else:
+            elif size >= target - NUMBER_TRANSFORMATION + 1:
                 to_copy[key] = val
+            else:
+                diff = target - size
+                num_to_augment = max(1, int(diff // NUMBER_TRANSFORMATION))
+                num_to_augment = min(num_to_augment, size)
+                to_augment[key] = random.sample(val, num_to_augment)
+                to_copy[key] = [x for x in val if x not in to_augment[key]]
 
     return to_copy, to_augment
 
