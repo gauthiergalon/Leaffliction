@@ -7,3 +7,7 @@ __pycache__/
 /images
 augmented_directory*
 leaffliction.zip
+
+train/
+validation/
+model.pth
