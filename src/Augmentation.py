@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 
 DEFAULT_INPUT_LOCATION = Path("images/")
 DEFAULT_OUTPUT_LOCATION = Path("augmented_directory/")
+NUMBER_TRANSFORMATION = 6
 
 
 def augment(image, transform):
@@ -65,11 +66,13 @@ def balance_classes(input, inplace=False):
 
         for key, val in categories.items():
             size = len(val)
-            if size > target - 7:
+            if size > target - NUMBER_TRANSFORMATION + 1:
                 to_copy[key] = random.sample(val, target)
-            elif size < target - 7:
+            elif size < target - NUMBER_TRANSFORMATION + 1:
                 diff = target - size
-                to_augment[key] = random.sample(val, int(diff // 6))
+                to_augment[key] = random.sample(
+                    val, int(diff // NUMBER_TRANSFORMATION)
+                )
                 to_copy[key] = [x for x in val if x not in to_augment[key]]
             else:
                 to_copy[key] = val
@@ -78,7 +81,7 @@ def balance_classes(input, inplace=False):
 
 
 def display_images(images, labels):
-    _, axes = plt.subplots(1, 7, figsize=(20, 4))
+    _, axes = plt.subplots(1, NUMBER_TRANSFORMATION + 1, figsize=(20, 4))
 
     for ax, img, title in zip(axes.flat, images, labels):
         ax.imshow(img)
@@ -87,20 +90,6 @@ def display_images(images, labels):
 
     plt.tight_layout()
     plt.show()
-
-
-def unique_directory(directory_path):
-    if not directory_path.exists():
-        return directory_path
-
-    counter = 1
-    while True:
-        candidate = directory_path.with_name(
-            f"{directory_path.name}_{counter}"
-        )
-        if not candidate.exists():
-            return candidate
-        counter += 1
 
 
 def parse_args():
@@ -132,7 +121,10 @@ def parse_args():
     parser.add_argument(
         "--eval",
         action="store_true",
-        help="Evaluation mode: uses a new separate output directory and balances by subsampling large classes.",
+        help=(
+            "Evaluation mode: uses a new separate output directory"
+            "and balances by subsampling large classes."
+        ),
     )
 
     return parser.parse_args()
@@ -144,7 +136,6 @@ def augmentation(input, output, eval_mode=False):
             raise FileNotFoundError
 
         if eval_mode:
-            output = unique_directory(output)
             inplace = False
         else:
             output = input if input.is_dir() else input.parent
