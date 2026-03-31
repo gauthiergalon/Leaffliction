@@ -1,9 +1,14 @@
+import warnings
 from argparse import ArgumentParser
 from pathlib import Path
 
 import cv2
 from matplotlib import pyplot as plt
-from plantcv import plantcv as pcv
+
+# Suppress FutureWarning from scikit-image (used by PlantCV)
+warnings.filterwarnings("ignore", category=FutureWarning)
+
+from plantcv import plantcv as pcv  # noqa: E402
 
 HIST_COLORS = [
     "blue",
