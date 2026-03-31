@@ -1,4 +1,3 @@
-SHELL := /bin/bash
 PY := python
 VENV := .venv
 PYBIN := $(VENV)/bin/python
