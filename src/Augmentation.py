@@ -12,10 +12,7 @@ DEFAULT_OUTPUT_LOCATION = Path("augmented_directory/")
 
 
 def augment(image, transform):
-    if transform:
-        return transform(image=image)["image"]
-    else:
-        return image
+    return transform(image=image)["image"] if transform else image
 
 
 def save(output_path, image):
