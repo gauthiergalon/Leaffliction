@@ -11,3 +11,5 @@ leaffliction.zip
 train/
 validation/
 model.pth
+
+test_images/
