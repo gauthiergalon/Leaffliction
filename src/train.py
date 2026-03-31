@@ -68,7 +68,8 @@ def data(src_path, dst_path, train_percent=0.80):
                 src_file = src_dir / fname
                 shutil.copy2(src_file, val_class_dir)
 
-    augmentation(train_dir, dst_path / "train")
+    train_output_dir = Path(dst_path) / "train"
+    augmentation(Path(train_dir), train_output_dir, eval_mode=True)
     shutil.rmtree(train_dir)
 
 
@@ -107,8 +108,13 @@ def main():
     args = parse_args()
 
     try:
-        if not Path(args.input).is_dir():
-            raise FileNotFoundError
+        input_path = Path(args.input)
+        if not input_path.exists():
+            print(f"Error: Path '{input_path.absolute()}' does not exist.")
+            return
+        if not input_path.is_dir():
+            print(f"Error: '{input_path.absolute()}' is not a directory.")
+            return
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             data(args.input, tmp_dir)
@@ -157,14 +163,15 @@ def main():
             zip_path = shutil.make_archive("leaffliction", "zip", tmp_dir)
             print(f"Saved zip: {zip_path}")
 
-    except FileNotFoundError:
-        print(f"Error: Folder '{args.input}' not found.")
     except PermissionError:
         print(f"Error: Permission denied for '{args.input}'.")
     except KeyboardInterrupt:
         print("Leaffliction: CTRL+C sent by user.")
     except Exception as ex:
-        print(f"Unexpected error occured : {ex}")
+        print(f"Unexpected error occurred: {ex}")
+        import traceback
+
+        traceback.print_exc()
 
 
 if __name__ == "__main__":

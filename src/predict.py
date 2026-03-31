@@ -237,7 +237,8 @@ def predict(model_path, input_path):
                 print(f"Total images: {total_predictions}")
                 print(f"Correct predictions: {correct_predictions}")
                 print(
-                    f"Incorrect predictions: {total_predictions - correct_predictions}"
+                    f"Incorrect predictions: \
+                        {total_predictions - correct_predictions}"
                 )
                 print(f"Accuracy: {accuracy:.2f}%")
                 print("=" * 50)
