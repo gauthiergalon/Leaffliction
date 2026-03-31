@@ -30,7 +30,7 @@ def copy(images_path, input_dir, output_dir):
             shutil.copy2(src, dst)
 
 
-def balance_classes(input):
+def balance_classes(input, inplace=False):
     categories = {
         entry.name: [
             file.name
@@ -44,21 +44,35 @@ def balance_classes(input):
     to_copy = {key: [] for key in categories.keys()}
     to_augment = {key: [] for key in categories.keys()}
 
-    target = int(
-        sum(len(category) for category in categories.values())
-        / len(categories)
-    )
-
-    for key, val in categories.items():
-        size = len(val)
-        if size > target - 7:
-            to_copy[key] = random.sample(val, target)
-        elif size < target - 7:
+    if inplace:
+        target = max(
+            (len(category) for category in categories.values()), default=0
+        )
+        for key, val in categories.items():
+            size = len(val)
             diff = target - size
-            to_augment[key] = random.sample(val, int(diff // 6))
-            to_copy[key] = [x for x in val if x not in to_augment[key]]
-        else:
-            to_copy[key] = val
+            num_to_augment = int(diff // 6)
+            if num_to_augment > 0:
+                if num_to_augment <= size:
+                    to_augment[key] = random.sample(val, num_to_augment)
+                else:
+                    to_augment[key] = random.choices(val, k=num_to_augment)
+    else:
+        target = int(
+            sum(len(category) for category in categories.values())
+            / (len(categories) or 1)
+        )
+
+        for key, val in categories.items():
+            size = len(val)
+            if size > target - 7:
+                to_copy[key] = random.sample(val, target)
+            elif size < target - 7:
+                diff = target - size
+                to_augment[key] = random.sample(val, int(diff // 6))
+                to_copy[key] = [x for x in val if x not in to_augment[key]]
+            else:
+                to_copy[key] = val
 
     return to_copy, to_augment
 
@@ -115,20 +129,32 @@ def parse_args():
         help="Path to the directory to save augmented images.",
     )
 
+    parser.add_argument(
+        "--eval",
+        action="store_true",
+        help="Evaluation mode: uses a new separate output directory and balances by subsampling large classes.",
+    )
+
     return parser.parse_args()
 
 
-def augmentation(input, output):
+def augmentation(input, output, eval_mode=False):
     try:
         if not input.exists():
             raise FileNotFoundError
 
-        output = unique_directory(output)
+        if eval_mode:
+            output = unique_directory(output)
+            inplace = False
+        else:
+            output = input if input.is_dir() else input.parent
+            inplace = True
 
         if input.is_dir():
             is_file = False
-            images_copy, images_augment = balance_classes(input)
-            copy(images_copy, input, output)
+            images_copy, images_augment = balance_classes(input, inplace)
+            if not inplace:
+                copy(images_copy, input, output)
         else:
             is_file = True
             images_augment = {input.parent.name: [input.name]}
@@ -176,12 +202,19 @@ def augmentation(input, output):
                     augmentation_names, augmentation_effects
                 ):
                     augmented_image = augment(image, augmentation_effect)
-                    save(
-                        output
-                        / class_name
-                        / f"{base_name}_{augmentation_name}{extension}",
-                        augmented_image,
-                    )
+                    if inplace and is_file:
+                        out_path = (
+                            output
+                            / f"{base_name}_{augmentation_name}{extension}"
+                        )
+                    else:
+                        out_path = (
+                            output
+                            / class_name
+                            / f"{base_name}_{augmentation_name}{extension}"
+                        )
+
+                    save(out_path, augmented_image)
                     if is_file:
                         images.append(augmented_image)
 
@@ -202,4 +235,4 @@ def augmentation(input, output):
 
 if __name__ == "__main__":
     args = parse_args()
-    augmentation(args.input, args.output)
+    augmentation(args.input, args.output, args.eval)
