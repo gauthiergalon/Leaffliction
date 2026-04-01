@@ -6,7 +6,7 @@ import cv2
 import matplotlib
 
 matplotlib.use("Agg")
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt  # noqa E402
 
 # Suppress FutureWarning from scikit-image (used by PlantCV)
 warnings.filterwarnings("ignore", category=FutureWarning)

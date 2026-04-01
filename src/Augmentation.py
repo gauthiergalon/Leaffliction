@@ -8,9 +8,9 @@ import cv2
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # noqa E402
 
-import utils
+import utils  # noqa E402
 
 DEFAULT_INPUT_LOCATION = Path("images/")
 DEFAULT_OUTPUT_LOCATION = Path("augmented_directory/")

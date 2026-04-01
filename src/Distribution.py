@@ -4,9 +4,9 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # noqa E402
 
-import utils
+import utils  # noqa E402
 
 DEFAULT_INPUT_LOCATION = "images/"
 

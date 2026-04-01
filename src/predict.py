@@ -6,14 +6,14 @@ import matplotlib
 import torch
 
 matplotlib.use("Agg")
-from matplotlib import pyplot as plt
-from PIL import Image
-from plantcv import plantcv as pcv
-from torchvision import transforms
+from matplotlib import pyplot as plt  # noqa E402
+from PIL import Image  # noqa E402
+from plantcv import plantcv as pcv  # noqa E402
+from torchvision import transforms  # noqa E402
 
-import utils
-from cnn import CNN
-from Transformation import compute_masks
+import utils  # noqa E402
+from cnn import CNN  # noqa E402
+from Transformation import compute_masks  # noqa E402
 
 
 def parse_args():
