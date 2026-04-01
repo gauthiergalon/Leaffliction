@@ -3,12 +3,17 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import cv2
+import matplotlib
+
+matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 
 # Suppress FutureWarning from scikit-image (used by PlantCV)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 from plantcv import plantcv as pcv  # noqa: E402
+
+import utils  # noqa: E402
 
 HIST_COLORS = [
     "blue",
@@ -209,7 +214,7 @@ def show_composite(
         ax7.set_title("Color Histograms")
 
     plt.tight_layout()
-    plt.show()
+    utils.show_plot()
 
 
 def transform(input, output, save):

@@ -1,7 +1,12 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+import utils
 
 DEFAULT_INPUT_LOCATION = "images/"
 
@@ -51,7 +56,7 @@ def main():
 
         fig.legend(categories.keys(), loc="upper left")
 
-        plt.show()
+        utils.show_plot()
 
     except FileNotFoundError:
         print(f"Error: Directory '{args.input}' not found.")

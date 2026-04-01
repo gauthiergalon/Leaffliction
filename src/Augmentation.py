@@ -5,7 +5,12 @@ from pathlib import Path
 
 import albumentations as A
 import cv2
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+import utils
 
 DEFAULT_INPUT_LOCATION = Path("images/")
 DEFAULT_OUTPUT_LOCATION = Path("augmented_directory/")
@@ -89,7 +94,7 @@ def display_images(images, labels):
         ax.axis("off")
 
     plt.tight_layout()
-    plt.show()
+    utils.show_plot()
 
 
 def parse_args():

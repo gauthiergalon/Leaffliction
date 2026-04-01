@@ -2,12 +2,16 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import cv2
+import matplotlib
 import torch
+
+matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 from PIL import Image
 from plantcv import plantcv as pcv
 from torchvision import transforms
 
+import utils
 from cnn import CNN
 from Transformation import compute_masks
 
@@ -145,7 +149,7 @@ def display_prediction(image_path, predicted_class, confidence):
         ax3.axis("off")
 
         plt.tight_layout()
-        plt.show()
+        utils.show_plot()
 
     except Exception as ex:
         print(f"Error displaying images: {ex}")
