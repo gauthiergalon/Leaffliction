@@ -20,7 +20,7 @@ help:
 		@echo "  train        - Train the model with images/ dataset"
 		@echo "  predict      - Run prediction (use: make predict IMAGE=path/to/image.jpg)"
 		@echo "  test         - Test prediction accuracy on all categories"
-		@echo "  extract      - Extract model.pth from leaffliction.zip"
+		@echo "  extract      - Extract model.pth and validation/ from leaffliction.zip"
 		@echo "  clean        - Remove generated files and __pycache__"
 		@echo "  fclean       - Remove venv and all generated files"
 		@echo "  re           - Clean and rebuild everything"
@@ -57,10 +57,12 @@ train: venv requirements
 		@echo
 
 extract:
-		@echo "Extracting model from archive..."
+		@echo "Extracting model and validation data from archive..."
 		@if [ -f "$(ZIP)" ]; then \
 				unzip -j $(ZIP) $(MODEL) -d .; \
+				unzip $(ZIP) validation/* -d .; \
 				echo "Model extracted: $(MODEL)"; \
+				echo "Validation data extracted: validation/"; \
 		else \
 				echo "Error: $(ZIP) not found. Run 'make train' first."; \
 				exit 1; \
