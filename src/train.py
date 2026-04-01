@@ -1,3 +1,4 @@
+import os
 import random
 import shutil
 import tempfile
@@ -75,6 +76,7 @@ def data(src_path, dst_path, train_percent=0.80):
 
 def train(model, train_loader, criterion, optimizer, device, num_epochs=5):
     model.train()
+    scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
 
     for epoch in range(num_epochs):
         running_loss = 0.0
@@ -82,12 +84,19 @@ def train(model, train_loader, criterion, optimizer, device, num_epochs=5):
         total = 0
 
         for inputs, labels in train_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+            inputs, labels = (
+                inputs.to(device, non_blocking=True),
+                labels.to(device, non_blocking=True),
+            )
+            optimizer.zero_grad(set_to_none=True)
+            with torch.autocast(
+                device_type=device.type, enabled=device.type == "cuda"
+            ):
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
             running_loss += loss.item()
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
@@ -131,11 +140,21 @@ def main():
                 transform=image_transform,
             )
 
-            train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
+            num_workers = min(8, os.cpu_count() or 1)
+            train_loader = DataLoader(
+                train_data,
+                batch_size=64,
+                shuffle=True,
+                num_workers=num_workers,
+                pin_memory=True,
+                persistent_workers=num_workers > 0,
+            )
 
             device = torch.device(
                 "cuda" if torch.cuda.is_available() else "cpu"
             )
+            if device.type == "cuda":
+                torch.backends.cudnn.benchmark = True
 
             model = CNN(num_classes=len(train_data.classes)).to(device)
 
