@@ -10,6 +10,8 @@ leaffliction.zip
 
 train/
 validation/
+test/
+
 model.pth
 
 test_images/
