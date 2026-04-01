@@ -1,7 +1,7 @@
-PY := python
+PYTHON_VERSION := 3.13.3
 VENV := .venv
 PYBIN := $(VENV)/bin/python
-PIP := $(VENV)/bin/pip
+UV := uv
 MODEL := model.pth
 ZIP := leaffliction.zip
 
@@ -13,9 +13,9 @@ all: venv requirements lint
 
 help:
 		@echo "Available targets:"
-		@echo "  all          - Set up venv, install requirements, and run lint"
-		@echo "  venv         - Create virtual environment"
-		@echo "  requirements - Install dependencies from requirements.txt"
+		@echo "  all          - Set up venv (uv + Python 3.13.3), install requirements, and run lint"
+		@echo "  venv         - Create virtual environment with uv and Python 3.13.3"
+		@echo "  requirements - Install dependencies from requirements.txt using uv"
 		@echo "  lint         - Run flake8 linter on source code"
 		@echo "  train        - Train the model with images/ dataset"
 		@echo "  predict      - Run prediction (use: make predict IMAGE=path/to/image.jpg)"
@@ -37,8 +37,8 @@ lint:
 venv:
 		@echo "Checking for virtual environment..."
 		@if [ ! -d "$(VENV)" ]; then \
-				$(PY) -m venv $(VENV); \
-				echo "Virtual environnement created in $(VENV)"; \
+				$(UV) venv --python $(PYTHON_VERSION) $(VENV); \
+				echo "Virtual environment created in $(VENV) with Python $(PYTHON_VERSION)"; \
 		else \
 				echo "Virtual environment already exists"; \
 		fi
@@ -46,8 +46,8 @@ venv:
 
 requirements: venv
 		@echo "Installing dependencies..."
-		$(PIP) install --upgrade pip
-		$(PIP) install -r requirements.txt
+		$(UV) pip install --upgrade pip
+		$(UV) pip install -r requirements.txt
 		@echo
 
 train: venv requirements
